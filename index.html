@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Player</title>
+    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; font-family: Arial, sans-serif; }
+        video { width: 100vw; height: 100vh; }
+        .error { color: white; text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+    <video id="player" controls></video>
+    <div id="error" class="error" style="display: none;">Stream not found</div>
+
+    <script>
+        const video = document.getElementById('player');
+        const error = document.getElementById('error');
+        const url = new URLSearchParams(window.location.search).get('url');
+        
+        if (!url) {
+            error.textContent = 'No stream URL provided. Use: ?url=YOUR_STREAM_URL';
+            error.style.display = 'block';
+        } else {
+            loadStream(url);
+        }
+        
+        function loadStream(streamUrl) {
+            if (streamUrl.includes('.mpd')) {
+                // DASH
+                const player = dashjs.MediaPlayer().create();
+                player.initialize(video, streamUrl, true);
+                player.on(dashjs.MediaPlayer.events.ERROR, () => showError());
+            } else if (streamUrl.includes('.m3u8')) {
+                // HLS
+                if (Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(streamUrl);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.ERROR, () => showError());
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = streamUrl;
+                }
+            } else {
+                // Direct MP4
+                video.src = streamUrl;
+            }
+            
+            video.onerror = showError;
+        }
+        
+        function showError() {
+            video.style.display = 'none';
+            error.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
